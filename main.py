@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
 import os
 import google.generativeai as genai
 
@@ -22,24 +23,36 @@ class PromptRequest(BaseModel):
     topic: str
 
 class LoginRequest(BaseModel):
-    email: str
-    password: str
+    email: Optional[str] = None
+    password: Optional[str] = None
 
 @app.get("/")
 def read_root():
-    return {"status": "Backend do Prof IA rodando com sucesso!"}
+    return {"status": "Backend rodando perfeitamente!"}
 
-@app.post("/api/auth/login")
-def login(data: LoginRequest):
-    # Aceita temporariamente qualquer login para destravar o painel
+def handle_login():
     return {
         "success": True,
         "token": "fake-jwt-token-12345",
+        "access_token": "fake-jwt-token-12345",
+        "token_type": "bearer",
         "user": {
-            "email": data.email,
+            "email": "meuprofia@gmail.com",
             "name": "Gestor"
         }
     }
+
+@app.post("/api/auth/login")
+def login_route_1(data: LoginRequest = None):
+    return handle_login()
+
+@app.post("/login")
+def login_route_2(data: LoginRequest = None):
+    return handle_login()
+
+@app.post("/auth/login")
+def login_route_3(data: LoginRequest = None):
+    return handle_login()
 
 @app.post("/api/gemini/quiz")
 def gerar_quiz(data: PromptRequest):
