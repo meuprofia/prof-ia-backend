@@ -21,9 +21,25 @@ if GEMINI_API_KEY:
 class PromptRequest(BaseModel):
     topic: str
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
 @app.get("/")
 def read_root():
     return {"status": "Backend do Prof IA rodando com sucesso!"}
+
+@app.post("/api/auth/login")
+def login(data: LoginRequest):
+    # Aceita temporariamente qualquer login para destravar o painel
+    return {
+        "success": True,
+        "token": "fake-jwt-token-12345",
+        "user": {
+            "email": data.email,
+            "name": "Gestor"
+        }
+    }
 
 @app.post("/api/gemini/quiz")
 def gerar_quiz(data: PromptRequest):
