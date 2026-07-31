@@ -6,7 +6,6 @@ import google.generativeai as genai
 
 app = FastAPI()
 
-# Configuração do CORS para permitir requisições da Vercel
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,7 +14,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configurar a IA do Gemini com a chave das variáveis de ambiente
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
@@ -30,7 +28,7 @@ def read_root():
 @app.post("/api/gemini/quiz")
 def gerar_quiz(data: PromptRequest):
     try:
-        model = genai.GenerativeModel("gemini-pro")
+        model = genai.GenerativeModel("gemini-1.5-flash")
         prompt = f"Gere um quiz educacional sobre: {data.topic}"
         response = model.generate_content(prompt)
         return {"result": response.text}
@@ -40,7 +38,7 @@ def gerar_quiz(data: PromptRequest):
 @app.post("/api/gemini/flashcards")
 def gerar_flashcards(data: PromptRequest):
     try:
-        model = genai.GenerativeModel("gemini-pro")
+        model = genai.GenerativeModel("gemini-1.5-flash")
         prompt = f"Gere flashcards de memorização sobre: {data.topic}"
         response = model.generate_content(prompt)
         return {"result": response.text}
