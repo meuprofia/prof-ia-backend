@@ -109,3 +109,22 @@ def material(data: dict = None):
     payload = {"contents": [{"parts": [{"text": f"Crie um material de estudo completo sobre: {topic}"}]}]}
     res = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=20)
     return {"result": res.json()["candidates"][0]["content"]["parts"][0]["text"]}
+@app.post("/api/auth/login")
+@app.post("/api/auth/login/")
+def login(data: dict = None):
+    data = data or {}
+    email = data.get("email") or ""
+    senha = data.get("senha") or ""
+    
+    # Validação básica temporária para liberar o seu acesso ao dashboard imediatamente
+    if email:
+        return {
+            "success": True,
+            "token": "fake-jwt-token-profia",
+            "user": {
+                "email": email,
+                "name": "Gestor Prof IA",
+                "plan": "free"
+            }
+        }
+    return {"success": False, "message": "E-mail inválido"}
