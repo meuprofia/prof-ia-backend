@@ -49,18 +49,26 @@ def login(data: dict = None):
 def gerar_quiz(data: dict = None):
     data = data or {}
     topic = data.get("topic") or data.get("assunto") or "Geral"
-    prompt = f"Gere 10 questões de quiz sobre {topic}. Retorne em formato de texto limpo estruturado para estudos."
+    prompt = f"Gere 10 questões de quiz sobre {topic}. Retorne APENAS um JSON válido no formato de lista contendo objetos com as chaves: 'pergunta', 'opcoes' (lista de 4 strings), 'resposta_correta' e 'explicacao'."
     texto = chamar_gemini(prompt)
-    return {"result": texto}
+    try:
+        limpo = texto.replace("```json", "").replace("```", "").strip()
+        return json.loads(limpo)
+    except:
+        return {"result": texto}
 
 @app.post("/api/gemini/flashcards")
 @app.post("/api/gemini/flashcards/")
 def gerar_flashcards(data: dict = None):
     data = data or {}
     topic = data.get("topic") or data.get("assunto") or "Geral"
-    prompt = f"Gere 10 flashcards de memorização sobre {topic} contendo frente e verso."
+    prompt = f"Gere 10 flashcards sobre {topic}. Retorne APENAS um JSON válido no formato de lista contendo objetos com as chaves: 'front' e 'back'."
     texto = chamar_gemini(prompt)
-    return {"result": texto}
+    try:
+        limpo = texto.replace("```json", "").replace("```", "").strip()
+        return json.loads(limpo)
+    except:
+        return [{"front": "Erro ao estruturar", "back": texto}]
 
 @app.post("/api/gemini/chat")
 @app.post("/api/gemini/chat/")
