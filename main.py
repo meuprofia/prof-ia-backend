@@ -29,24 +29,28 @@ def gerar_flashcards(data: dict = None):
     if not GEMINI_API_KEY:
         return [{"front": "Erro", "back": "GEMINI_API_KEY não configurada no Render."}]
     
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    # ATUALIZADO PARA v1beta E gemini-1.5-flash
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     payload = {
         "contents": [{
             "parts": [{
-                "text": f"Gere 10 flashcards sobre {topic} em JSON com as chaves exatas 'front' e 'back'."
+                "text": f"Gere exatamente 10 flashcards sobre {topic}. Retorne APENAS um array JSON puro (começando com [ e terminando com ]), onde cada objeto tem exatamente as chaves: 'front' e 'back'."
             }]
         }]
     }
     
-    res = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=15)
-    
-    if res.status_code != 200:
-        return [{"front": f"Erro Google {res.status_code}", "back": res.text}]
-    
-    texto = res.json()["candidates"][0]["content"]["parts"][0]["text"]
-    limpo = texto.replace("```json", "").replace("```", "").strip()
-    inicio = limpo.find("[")
-    fim = limpo.rfind("]")
-    if inicio != -1 and fim != -1:
-        limpo = limpo[inicio:fim+1]
-    return json.loads(limpo)
+    try:
+        res = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=15)
+        
+        if res.status_code != 200:
+            return [{"front": f"Erro Google {res.status_code}", "back": res.text}]
+        
+        texto = res.json()["candidates"][0]["content"]["parts"][0]["text"]
+        limpo = texto.replace("```json", "").replace("```", "").strip()
+        inicio = limpo.find("[")
+        fim = limpo.rfind("]")
+        if inicio != -1 and fim != -1:
+            limpo = limpo[inicio:fim+1]
+        return json.loads(limpo)
+    except Exception as e:
+        return [{"front": "Erro interno", "back": str(e)}]
