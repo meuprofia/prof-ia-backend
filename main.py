@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import google.generativeai as genai
+import json
 
 app = FastAPI()
 
@@ -19,7 +20,7 @@ if GEMINI_API_KEY:
 
 def chamar_gemini(prompt: str):
     if not GEMINI_API_KEY:
-        return "Erro: GEMINI_API_KEY não configurada no Render."
+        return "Erro: Chave não configurada."
     for nome_modelo in ["gemini-1.5-flash", "gemini-pro"]:
         try:
             model = genai.GenerativeModel(nome_modelo)
@@ -28,7 +29,7 @@ def chamar_gemini(prompt: str):
                 return response.text
         except Exception:
             continue
-    return "Erro ao gerar conteúdo com a Inteligência Artificial."
+    return "Erro ao gerar."
 
 @app.get("/")
 def read_root():
@@ -48,7 +49,8 @@ def login(data: dict = None):
 def gerar_quiz(data: dict = None):
     data = data or {}
     topic = data.get("topic") or data.get("assunto") or "Geral"
-    texto = chamar_gemini(f"Gere um quiz educacional sobre: {topic}")
+    prompt = f"Gere 10 questões de quiz sobre {topic}. Retorne em formato de texto limpo estruturado para estudos."
+    texto = chamar_gemini(prompt)
     return {"result": texto}
 
 @app.post("/api/gemini/flashcards")
@@ -56,7 +58,8 @@ def gerar_quiz(data: dict = None):
 def gerar_flashcards(data: dict = None):
     data = data or {}
     topic = data.get("topic") or data.get("assunto") or "Geral"
-    texto = chamar_gemini(f"Gere flashcards sobre: {topic}")
+    prompt = f"Gere 10 flashcards de memorização sobre {topic} contendo frente e verso."
+    texto = chamar_gemini(prompt)
     return {"result": texto}
 
 @app.post("/api/gemini/chat")
@@ -64,29 +67,25 @@ def gerar_flashcards(data: dict = None):
 def chat(data: dict = None):
     data = data or {}
     message = data.get("message") or data.get("prompt") or "Olá"
-    texto = chamar_gemini(message)
-    return {"result": texto}
+    return {"result": chamar_gemini(message)}
 
 @app.post("/api/gemini/redacao")
 @app.post("/api/gemini/redacao/")
 def redacao(data: dict = None):
     data = data or {}
     tema = data.get("tema") or data.get("topic") or "Geral"
-    texto = chamar_gemini(f"Corrija ou dê dicas sobre a redação com o tema: {tema}")
-    return {"result": texto}
+    return {"result": chamar_gemini(f"Analise o tema de redação: {tema}")}
 
 @app.post("/api/gemini/editor-refine")
 @app.post("/api/gemini/editor-refine/")
 def editor_refine(data: dict = None):
     data = data or {}
     texto_obj = data.get("text") or "Revisar"
-    texto = chamar_gemini(f"Refine e melhore o seguinte texto educacional: {texto_obj}")
-    return {"result": texto}
+    return {"result": chamar_gemini(f"Melhore este texto: {texto_obj}")}
 
 @app.post("/api/gemini/material")
 @app.post("/api/gemini/material/")
 def material(data: dict = None):
     data = data or {}
     topic = data.get("topic") or data.get("assunto") or "Geral"
-    texto = chamar_gemini(f"Crie um resumo e material estruturado sobre: {topic}")
-    return {"result": texto}
+    return {"result": chamar_gemini(f"Crie um material de estudo completo sobre: {topic}")}
