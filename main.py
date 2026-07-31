@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from google import genai
 import os
-import requests
 import json
 
 app = FastAPI()
@@ -14,95 +15,64 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+API_KEY = os.getenv("GEMINI_API_KEY")
+
+if API_KEY:
+    client = genai.Client(api_key=API_KEY)
+else:
+    client = None
+
+
+class FlashcardRequest(BaseModel):
+    topic: str
+
 
 @app.get("/")
-def read_root():
-    return {"status": "OK"}
+def home():
+    return {"status": "online"}
+
 
 @app.post("/api/gemini/flashcards")
-@app.post("/api/gemini/flashcards/")
-def gerar_flashcards(data: dict = None):
-    data = data or {}
-    topic = data.get("topic") or data.get("assunto") or "Geral"
-    
-    if not GEMINI_API_KEY:
-        return [{"front": "Erro", "back": "GEMINI_API_KEY não configurada no Render."}]
-    
-    # URL corrigida para o modelo estável atual
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-    payload = {
-        "contents": [{
-            "parts": [{
-                "text": f"Gere exatamente 10 flashcards sobre {topic}. Retorne APENAS um array JSON puro (começando com [ e terminando com ]), onde cada objeto tem exatamente as chaves: 'front' e 'back'."
-            }]
-        }]
-    }
-    
+def gerar_flashcards(req: FlashcardRequest):
+
+    if client is None:
+        return {
+            "error": "A variável GEMINI_API_KEY não foi configurada."
+        }
+
+    prompt = f"""
+Crie exatamente 10 flashcards sobre "{req.topic}".
+
+Retorne SOMENTE um JSON válido.
+
+Formato:
+
+[
+  {{
+    "front":"Pergunta",
+    "back":"Resposta"
+  }}
+]
+"""
+
     try:
-        res = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=15)
-        
-        if res.status_code != 200:
-            # Fallback automático inteligente caso a API recuse, para nunca quebrar a tela do usuário
-            return [
-                {
-                    "front": f"Conceito {i} de {topic}",
-                    "back": f"Definição gerada automaticamente para o estudo focado de {topic}."
-                } for i in range(1, 11)
-            ]
-        
-        texto = res.json()["candidates"][0]["content"]["parts"][0]["text"]
-        limpo = texto.replace("```json", "").replace("```", "").strip()
-        inicio = limpo.find("[")
-        fim = limpo.rfind("]")
-        if inicio != -1 and fim != -1:
-            limpo = limpo[inicio:fim+1]
-        return json.loads(limpo)
-    except Exception:
-        return [
-            {
-                "front": f"Conceito {i} de {topic}",
-                "back": f"Definição gerada automaticamente para o estudo focado de {topic}."
-            } for i in range(1, 11)
-        ]
 
-@app.post("/api/gemini/quiz")
-@app.post("/api/gemini/quiz/")
-def gerar_quiz(data: dict = None):
-    data = data or {}
-    topic = data.get("topic") or data.get("assunto") or "Geral"
-    return [
-        {
-            "pergunta": f"Questão sobre {topic} #{i}",
-            "opcoes": ["Alternativa A", "Alternativa B", "Alternativa C", "Alternativa D"],
-            "resposta_correta": "Alternativa A",
-            "explicacao": f"Explicação detalhada sobre {topic}."
-        } for i in range(1, 11)
-    ]
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
 
-@app.post("/api/gemini/chat")
-@app.post("/api/gemini/chat/")
-def chat(data: dict = None):
-    data = data or {}
-    message = data.get("message") or data.get("prompt") or "Olá"
-    return {"result": f"Olá! Entendi sua mensagem sobre: {message}"}
+        texto = response.text.strip()
 
-@app.post("/api/gemini/redacao")
-@app.post("/api/gemini/redacao/")
-def redacao(data: dict = None):
-    data = data or {}
-    tema = data.get("tema") or data.get("topic") or "Geral"
-    return {"result": f"Análise estruturada e dicas para a redação sobre o tema: {tema}."}
+        texto = (
+            texto.replace("```json", "")
+            .replace("```", "")
+            .strip()
+        )
 
-@app.post("/api/gemini/editor-refine")
-@app.post("/api/gemini/editor-refine/")
-def editor_refine(data: dict = None):
-    data = data or {}
-    return {"result": data.get("text") or "Texto revisado com sucesso."}
+        return json.loads(texto)
 
-@app.post("/api/gemini/material")
-@app.post("/api/gemini/material/")
-def material(data: dict = None):
-    data = data or {}
-    topic = data.get("topic") or data.get("assunto") or "Geral"
-    return {"result": f"Material de estudo completo sobre: {topic}."}
+    except Exception as e:
+        return {
+            "error": str(e)
+        }
