@@ -43,15 +43,11 @@ def handle_login():
     }
 
 @app.post("/api/auth/login")
-def login_route_1(data: LoginRequest = None):
+def login_v1(data: LoginRequest = None):
     return handle_login()
 
-@app.post("/login")
-def login_route_2(data: LoginRequest = None):
-    return handle_login()
-
-@app.post("/auth/login")
-def login_route_3(data: LoginRequest = None):
+@app.post("/api/auth/login/")
+def login_v2(data: LoginRequest = None):
     return handle_login()
 
 @app.post("/api/gemini/quiz")
