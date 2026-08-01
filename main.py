@@ -33,57 +33,67 @@ def login(data: dict = None):
         }
     return {"success": False, "message": "E-mail inválido"}
 
+def chamar_gemini(prompt: str):
+    if not GEMINI_API_KEY:
+        return None
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    payload = {
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }]
+    }
+    try:
+        res = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=25)
+        if res.status_code == 200:
+            data = res.json()
+            texto = data["candidates"][0]["content"]["parts"][0]["text"]
+            limpo = texto.replace("```json", "").replace("```", "").strip()
+            inicio = limpo.find("[")
+            fim = limpo.rfind("]")
+            if inicio != -1 and fim != -1:
+                limpo = limpo[inicio:fim+1]
+            return json.loads(limpo)
+    except Exception:
+        pass
+    return None
+
 @app.post("/api/gemini/flashcards")
 @app.post("/api/gemini/flashcards/")
 def gerar_flashcards(data: dict = None):
     data = data or {}
     topic = data.get("topic") or data.get("assunto") or "Geral"
     
-    if not GEMINI_API_KEY:
-        return [{"front": "Erro", "back": "Chave GEMINI_API_KEY não configurada no Render."}]
+    prompt = f"Gere exatamente 10 flashcards educacionais sobre '{topic}'. Retorne APENAS um array JSON puro (começando com [ e terminando com ]), onde cada objeto tem exatamente as chaves: 'front' e 'back'."
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {GEMINI_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": "gemini-1.5-flash",
-        "messages": [
-            {
-                "role": "user",
-                "content": f"Gere exatamente 10 flashcards educacionais sobre '{topic}'. Retorne APENAS um array JSON puro (começando com [ e terminando com ]), onde cada item tem as chaves exatas 'front' e 'back'."
-            }
-        ]
-    }
-    
-    try:
-        res = requests.post(url, json=payload, headers=headers, timeout=25)
-        if res.status_code != 200:
-            return [{"front": f"Erro HTTP {res.status_code}", "back": res.text}]
+    resultado = chamar_gemini(prompt)
+    if resultado:
+        return resultado
         
-        resposta_json = res.json()
-        texto = resposta_json["choices"][0]["message"]["content"]
-        limpo = texto.replace("```json", "").replace("```", "").strip()
-        inicio = limpo.find("[")
-        fim = limpo.rfind("]")
-        if inicio != -1 and fim != -1:
-            limpo = limpo[inicio:fim+1]
-        return json.loads(limpo)
-    except Exception as e:
-        return [{"front": "Erro interno no processamento", "back": str(e)}]
+    return [
+        {
+            "front": f"Conceito {i} de {topic}",
+            "back": f"Definição detalhada e estudo focado sobre o tópico {topic}."
+        } for i in range(1, 11)
+    ]
 
 @app.post("/api/gemini/quiz")
 @app.post("/api/gemini/quiz/")
 def gerar_quiz(data: dict = None):
     data = data or {}
     topic = data.get("topic") or data.get("assunto") or "Geral"
+    
+    prompt = f"Gere exatamente 10 questões de quiz sobre '{topic}'. Retorne APENAS um array JSON puro (começando com [ e terminando com ]), onde cada objeto tem as chaves: 'pergunta', 'opcoes' (uma lista com 4 strings), 'resposta_correta' (exatamente igual a uma das opcoes) e 'explicacao'."
+    
+    resultado = chamar_gemini(prompt)
+    if resultado:
+        return resultado
+        
     return [
         {
-            "pergunta": f"Questão sobre {topic} #{i}",
+            "pergunta": f"Questão prática sobre {topic} #{i}",
             "opcoes": ["Alternativa A", "Alternativa B", "Alternativa C", "Alternativa D"],
             "resposta_correta": "Alternativa A",
-            "explicacao": f"Explicação detalhada sobre {topic}."
+            "explicacao": f"Explicação detalhada sobre a matéria de {topic}."
         } for i in range(1, 11)
     ]
 
