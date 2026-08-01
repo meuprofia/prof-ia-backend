@@ -35,8 +35,8 @@ def login(data: dict = None):
     return {"success": False, "message": "E-mail inválido"}
 
 def chamar_ia_gemini(prompt: str):
-    """Função centralizada que faz a chamada oficial para a API do Gemini"""
     if not GEMINI_API_KEY:
+        print("ERRO: GEMINI_API_KEY não está definida.")
         return None
         
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
@@ -48,14 +48,16 @@ def chamar_ia_gemini(prompt: str):
     
     try:
         res = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+        print(f"Status Code da API Google: {res.status_code}")
+        print(f"Resposta bruta da API Google: {res.text}")
+        
         if res.status_code == 200:
             data = res.json()
             return data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as e:
-        print(f"Erro ao conectar com Gemini: {e}")
+        print(f"EXCEÇÃO CRÍTICA na requisição do Gemini: {e}")
     
     return None
-
 @app.post("/api/gemini/flashcards")
 @app.post("/api/gemini/flashcards/")
 def gerar_flashcards(data: dict = None):
